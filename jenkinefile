@@ -1,0 +1,58 @@
+pipeline {
+    agent any
+
+    environment {
+        SONAR_SERVER  = 'sonar-server'
+        SONAR_SCANNER = 'sonar-scanner'
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                git(
+                    branch: 'main',
+                    url: 'https://github.com/Ayush-yash/Weather-App.git'
+                )
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                script {
+                    def scannerHome = tool "${SONAR_SCANNER}"
+
+                    withSonarQubeEnv("${SONAR_SERVER}") {
+                        sh """
+                            ${scannerHome}/bin/sonar-scanner \
+                            -Dsonar.projectKey=weather-app \
+                            -Dsonar.projectName="Weather App" \
+                            -Dsonar.sources=. \
+                            -Dsonar.sourceEncoding=UTF-8 \
+                            -Dsonar.exclusions=".git/**"
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Quality Gate') {
+            steps {
+                timeout(time: 15, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Weather App: SonarQube Analysis and Quality Gate passed successfully!'
+        }
+
+        failure {
+            echo 'Weather App pipeline failed. Please check Jenkins and SonarQube logs.'
+        }
+    }
+}
+``
